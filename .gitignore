@@ -1,0 +1,53 @@
+# ---- 編譯產物（每次 Build 自動產生，不要 commit）----
+Debug/
+Release/
+*.o
+*.d
+*.su
+*.cyclo
+*.elf
+*.map
+*.list
+*.bin
+*.hex
+
+# 在電腦上編譯的單元測試執行檔
+test_odometry
+test_odometry.exe
+
+# ---- 個人 / 電腦專屬設定 ----
+.vscode/
+.settings/language.settings.xml
+*.bak
+.DS_Store
+Thumbs.db
+
+# ---- 用不到的 IAR 專案檔（我們用 STM32CubeIDE）----
+EWARM/
+
+# ---- 沒有被編譯的 CMSIS 套件（.cproject 已將它們排除在 build 外）----
+# 只有 Drivers/CMSIS/Include 和 Drivers/CMSIS/Device 會用到。
+# 根本解法：CubeMX → Project Manager → Code Generator →
+#          "Copy only the necessary library files"
+Drivers/CMSIS/Core/
+Drivers/CMSIS/Core_A/
+Drivers/CMSIS/DAP/
+Drivers/CMSIS/Documentation/
+Drivers/CMSIS/DSP/
+Drivers/CMSIS/NN/
+Drivers/CMSIS/RTOS/
+Drivers/CMSIS/RTOS2/
+
+# ---- 文件 / 網頁（不影響執行程式）----
+*.html
+docs/
+
+# ---- Claude / AI 助手相關 ----
+.claude/
+CLAUDE.md
+CLAUDE.local.md
+.mcp.json
+
+# ---- Python 快取 ----
+__pycache__/
+*.pyc

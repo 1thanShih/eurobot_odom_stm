@@ -1,0 +1,8 @@
+# 統一換行符號：repo 裡存 LF，checkout 時依各自作業系統轉換。
+# 避免 Windows / Mac 組員互相改到整個檔案的換行，造成很大的無意義 diff。
+* text=auto
+
+# 二進位檔不要轉換
+*.png binary
+*.jpg binary
+*.pdf binary
