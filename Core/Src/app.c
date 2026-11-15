@@ -1,6 +1,6 @@
 /**
  * @file    app.c
- * @brief   應用程式主流程。說明見 app.h。
+ * @brief   Application main loop.
  */
 #include "app.h"
 
@@ -13,16 +13,13 @@ static uint32_t last_sample_ms = 0;
 
 void app_init(void)
 {
-    /* 注意：Nucleo 的 LED / 按鈕（BSP_LED_Init、BSP_PB_Init）在 main.c 中
-     * 是在 app_init() 之後才初始化，所以不要在這裡操作它們。 */
-    odom_init();
+    odom_init(); // from odometry.c, initialize odometry module, start encoder timers
     last_sample_ms = HAL_GetTick();
 }
 
 void app_loop(void)
 {
-    /* 用時間戳判斷是否到了取樣時間，而不是 HAL_Delay()：
-     * 這樣傳輸花掉的時間不會累加進週期，週期才會接近 ODOM_SAMPLE_PERIOD_MS。 */
+    // every ODOM_SAMPLE_PERIOD_MS sample odometry and send telemetry
     uint32_t now_ms = HAL_GetTick();
     if (now_ms - last_sample_ms < ODOM_SAMPLE_PERIOD_MS) {
         return;
