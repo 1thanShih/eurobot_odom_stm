@@ -2,7 +2,7 @@
  * @file    microros_app.h
  * @brief   透過 micro-ROS 發布 odometry count。
  *
- * Topic : /odom_counts
+ * Topic : /wheel_counts
  * Type  : std_msgs/Int32MultiArray，data 固定 5 個值
  *           data[0]   = stamp，STM32 開機後的毫秒數（讀 encoder 的時間點）
  *           data[1~4] = pod1~4 的累計 count

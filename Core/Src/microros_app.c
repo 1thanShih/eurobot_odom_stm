@@ -23,7 +23,7 @@
 #include <std_msgs/msg/int32_multi_array.h>
 
 #define NODE_NAME          "odom_stm32"
-#define TOPIC_NAME         "odom_counts"
+#define TOPIC_NAME         "wheel_counts"
 #define MSG_LEN            (1 + ODOM_POD_COUNT)   /* stamp + 4 個 count */
 #define RETRY_PERIOD_MS    500U    /* 等待時多久找一次 agent */
 #define PING_PERIOD_MS     1000U   /* 連線中多久確認一次 agent 還在 */

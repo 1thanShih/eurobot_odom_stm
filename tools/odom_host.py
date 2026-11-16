@@ -2,7 +2,7 @@
 上位機 odometry 參考實作
 ========================
 
-⚠️ 只當參考：韌體已經改成用 micro-ROS 發布（/odom_counts），不再送 CSV，
+⚠️ 只當參考：韌體已經改成用 micro-ROS 發布（/wheel_counts），不再送 CSV，
 所以下面「開序列埠讀 CSV」的部分（parse_line、main）已經不能用。
 OdomEstimator 裡從 4 個 count 算出 (x, y, θ) 的數學仍然適用，
 之後寫上位機的 ROS 2 node 時可以直接搬過去。

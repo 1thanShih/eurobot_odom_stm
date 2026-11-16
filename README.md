@@ -14,7 +14,7 @@ odometry pod ×4 ──encoder──▶ STM32F446RE ──USART2 460800 (micro-R
 | 項目 | 內容 |
 |------|------|
 | Node | `odom_stm32` |
-| Topic | `/odom_counts` |
+| Topic | `/wheel_counts` |
 | Type | `std_msgs/Int32MultiArray`，QoS best effort |
 | 週期 | 10 ms（`robot_config.h` 的 `ODOM_SAMPLE_PERIOD_MS`） |
 | `data[0]` | stamp：STM32 開機後的毫秒數（讀 encoder 的時間點） |
