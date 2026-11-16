@@ -15,6 +15,33 @@
   *
   ******************************************************************************
   */
+/*
+ * ===== 中文說明 =====
+ * CubeMX 產生的程式進入點：初始化時脈和所有周邊，建立 FreeRTOS task，然後交給 scheduler。
+ * 我們自己的程式只從兩個地方接進來：
+ *   - USER CODE 2 裡的 app_init()
+ *   - StartDefaultTask() 裡的 app_task()
+ * 重新產生 code 時，只有 USER CODE BEGIN / END 之間的內容會保留。
+ *
+ * 函式：
+ *   main()                    開機流程：HAL_Init → 設時脈 → 初始化周邊 → app_init()
+ *                             → 建立 defaultTask → 初始化 LED2 / USER 按鈕 → 啟動 FreeRTOS（不會返回）。
+ *   SystemClock_Config()      設定時脈樹：HSI 16 MHz 經 PLL → SYSCLK 84 MHz，
+ *                             APB1 42 MHz、APB2 84 MHz。
+ *   MX_TIM1_Init()            TIM1 設成 Encoder mode（pod3，PA8 / PA9）。
+ *   MX_TIM2_Init()            TIM2 設成 Encoder mode（pod1，PA0 / PA1，32-bit 計數器）。
+ *   MX_TIM3_Init()            TIM3 設成 Encoder mode（pod2，PA6 / PA7）。
+ *   MX_TIM4_Init()            TIM4 設成 Encoder mode（pod4，PB6 / PB7）。
+ *   MX_USART2_UART_Init()     USART2 設成 460800 8N1，接 ST-LINK 虛擬 COM 埠，給 micro-ROS 用。
+ *   MX_DMA_Init()             開 DMA1 時脈，啟用 Stream5（UART RX）和 Stream6（UART TX）的中斷。
+ *   MX_GPIO_Init()            開 GPIO A/B/C/H 的時脈。各腳位的功能設定在 stm32f4xx_hal_msp.c。
+ *   StartDefaultTask()        FreeRTOS 唯一的 task，直接呼叫 app_task()，不會返回。
+ *   HAL_TIM_PeriodElapsedCallback()
+ *                             Timer 更新中斷的 callback。TIM6 每 1 ms 觸發一次，
+ *                             呼叫 HAL_IncTick() 讓 HAL_GetTick() 前進。
+ *   Error_Handler()           出錯時關中斷並停在無窮迴圈。用 debugger 暫停就能看出卡在哪。
+ *   assert_failed()           定義 USE_FULL_ASSERT 時，HAL 參數檢查失敗會呼叫這裡。目前是空的。
+ */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"

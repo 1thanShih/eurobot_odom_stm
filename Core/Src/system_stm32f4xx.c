@@ -1,3 +1,19 @@
+/*
+ * ===== 中文說明 =====
+ * ST 提供的 CMSIS 系統檔，在進入 main() 之前做最基本的 CPU 設定，並記錄目前的核心時脈。
+ * 一般不需要修改。真正的時脈設定在 main.c 的 SystemClock_Config()。
+ * （這個檔案沒有 USER CODE 區塊，若被 CubeMX 重新產生，這段說明可能會被蓋掉。）
+ *
+ * 全域變數：
+ *   SystemCoreClock          目前的核心時脈（Hz），HAL 和 FreeRTOS 都會讀它。
+ *
+ * 函式：
+ *   SystemInit()             reset 後由 startup_stm32f446retx.s 呼叫（在 main() 之前）：
+ *                            開啟 FPU（浮點運算單元），必要時設定向量表位置。
+ *   SystemCoreClockUpdate()  讀 RCC 暫存器重新計算 SystemCoreClock。改時脈後要呼叫，HAL 會自動做。
+ *   SystemInit_ExtMemCtl()   設定外接 SRAM / SDRAM。只有定義 DATA_IN_ExtSRAM / ExtSDRAM 才會編譯，
+ *                            這個專案沒用到。
+ */
 /**
   ******************************************************************************
   * @file    system_stm32f4xx.c

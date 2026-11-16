@@ -15,6 +15,20 @@
   *
   ******************************************************************************
   */
+/*
+ * ===== 中文說明 =====
+ * HAL 的時間基準（HAL_GetTick() / HAL_Delay() 用的 1 ms 計時）。
+ * 一般專案用 SysTick，但 FreeRTOS 要獨佔 SysTick 來切換 task，
+ * 所以 CubeMX 把 HAL 的計時改到 TIM6，這個檔案就是在設定 TIM6。
+ * TIM6 中斷的路徑：TIM6_DAC_IRQHandler()（stm32f4xx_it.c）
+ *   → HAL_TIM_PeriodElapsedCallback()（main.c）→ HAL_IncTick()。
+ *
+ * 函式：
+ *   HAL_InitTick()    依目前的 APB1 時脈算出 prescaler，讓 TIM6 每 1 ms 中斷一次，然後啟動。
+ *                     HAL_Init() 和每次改時脈時，HAL 會自動呼叫。
+ *   HAL_SuspendTick() 關掉 TIM6 的更新中斷（暫停計時，例如進低功耗前）。
+ *   HAL_ResumeTick()  重新開啟 TIM6 的更新中斷。
+ */
 /* USER CODE END Header */
 
 /* Includes ------------------------------------------------------------------*/

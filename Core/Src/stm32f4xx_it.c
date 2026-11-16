@@ -15,6 +15,29 @@
   *
   ******************************************************************************
   */
+/*
+ * ===== 中文說明 =====
+ * 中斷服務函式（ISR）。函式名稱要和向量表（startup_stm32f446retx.s）一致，
+ * 中斷發生時硬體會直接跳過來。這裡通常只轉呼叫 HAL 的 IRQHandler，
+ * 由 HAL 判斷原因後再呼叫對應的 callback。
+ * SVC / PendSV / SysTick 不在這裡，它們由 FreeRTOS 提供。
+ *
+ * 函式：
+ *   NMI_Handler()              不可遮蔽中斷，停在迴圈。
+ *   HardFault_Handler()        程式嚴重錯誤（例如存取非法位址、stack 爆掉）時進來，停在迴圈。
+ *                              程式「當掉」時用 debugger 暫停，常常就停在這裡。
+ *   MemManage_Handler()        記憶體保護錯誤，停在迴圈。
+ *   BusFault_Handler()         匯流排存取錯誤，停在迴圈。
+ *   UsageFault_Handler()       非法指令、未對齊存取等，停在迴圈。
+ *   DebugMon_Handler()         debug monitor，空的。
+ *   DMA1_Stream5_IRQHandler()  USART2 RX 的 DMA 中斷，交給 HAL_DMA_IRQHandler()。
+ *   DMA1_Stream6_IRQHandler()  USART2 TX 的 DMA 中斷。傳完後 HAL 會把 UART 狀態改回 READY，
+ *                              micro-ROS 的送出函式就是在等這件事。
+ *   USART2_IRQHandler()        USART2 本身的中斷（錯誤、傳送完成等），交給 HAL_UART_IRQHandler()。
+ *   EXTI15_10_IRQHandler()     外部中斷 10~15，這裡是板子上的藍色 USER 按鈕（PC13）。
+ *                              目前沒有處理按下的動作。
+ *   TIM6_DAC_IRQHandler()      TIM6 每 1 ms 一次，最後會呼叫 HAL_IncTick()。
+ */
 /* USER CODE END Header */
 
 /* Includes ------------------------------------------------------------------*/

@@ -1,4 +1,24 @@
 /*
+ * ===== 中文說明 =====
+ * micro-ROS 專用的 heap，改自 FreeRTOS 的 heap_4.c，多加了 realloc 和 calloc。
+ * 用一個 configTOTAL_HEAP_SIZE（30000 bytes）大小的靜態陣列 ucHeap 當記憶體池，
+ * 和 FreeRTOS 自己的 heap 是分開的兩塊。空閒區塊用依位址排序的 linked list 管理，
+ * 釋放時會和相鄰的空閒區塊合併，減少碎片。
+ *
+ * 函式：
+ *   pvPortMallocMicroROS()          配置記憶體（malloc）。第一次呼叫時會先初始化 heap。
+ *   vPortFreeMicroROS()             釋放記憶體（free）。
+ *   getBlockSize()                  查某塊已配置記憶體的大小（microros_allocators.c 統計用量時用）。
+ *   pvPortReallocMicroROS()         重新配置大小（realloc）：配新的一塊、複製內容、釋放舊的。
+ *   pvPortCallocMicroROS()          配置並清成 0（calloc）。
+ *   xPortGetFreeHeapSizeMicroROS()  目前剩餘的可用空間。
+ *   xPortGetMinimumEverFreeHeapSizeMicroROS()
+ *                                   開機以來剩餘空間的最低點，用來判斷 heap 夠不夠大。
+ *   vPortInitialiseBlocksMicroROS() 空函式，只是為了相容。
+ *   prvHeapInit()                   （內部）初始化 heap：對齊起始位址、建立第一個大空閒區塊。
+ *   prvInsertBlockIntoFreeList()    （內部）把釋放的區塊插回空閒清單，並和前後相鄰區塊合併。
+ */
+/*
  * A custom implementation of pvPortMallocMicroROS() and vPortFreeMicroROS() with realloc and
  * calloc features based on FreeRTOS heap4.c.
  */

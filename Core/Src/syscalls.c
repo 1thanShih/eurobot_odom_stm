@@ -1,3 +1,21 @@
+/*
+ * ===== 中文說明 =====
+ * newlib（ARM GCC 用的 C 標準函式庫）需要的底層「系統呼叫」。
+ * 在電腦上，printf() 最後會呼叫作業系統的 write()；MCU 沒有作業系統，
+ * 所以要在這裡提供這些函式。這個專案用不到檔案系統和行程，大部分只是讓連結器過關的空殼。
+ * （這個檔案沒有 USER CODE 區塊，若被 CubeMX 重新產生，這段說明可能會被蓋掉。）
+ *
+ * 函式：
+ *   initialise_monitor_handles()  semihosting 初始化，空的。
+ *   _getpid() / _kill() / _exit() 行程相關。_getpid 固定回傳 1，_kill 回報錯誤，
+ *                                 _exit 停在無窮迴圈（MCU 沒有地方可以「結束程式」）。
+ *   _read()                       scanf() 等讀取用，逐字呼叫 __io_getchar()。weak，可以覆寫。
+ *   _write()                      printf() 等輸出用，逐字呼叫 __io_putchar()。weak，可以覆寫。
+ *                                 想讓 printf 從 UART 印出來，就自己實作 __io_putchar()。
+ *   _close() / _fstat() / _isatty() / _lseek() / _open() / _wait() / _unlink()
+ *   _times() / _stat() / _link() / _fork() / _execve()
+ *                                 檔案和行程相關的空殼，回傳錯誤或固定值。
+ */
 /**
  ******************************************************************************
  * @file      syscalls.c

@@ -39,16 +39,22 @@ odometry pod ×4 ──encoder──▶ STM32F446RE ──USART2 460800 (micro-R
 ## 專案結構
 
 ```
-Core/Inc/robot_config.h    可調參數：各 pod 方向、發布週期
+Core/Inc/robot_config.h    可調參數：pod 方向、週期
+
 Core/Src/app.c             進入點：app_init() / app_task()
-Core/Src/odometry.c        讀 encoder、處理溢位、累計 count
+
+Core/Src/odometry.c        init encoder、處理溢位、累計 count
+
 Core/Src/microros_app.c    micro-ROS 連線與發布
 Core/Src/microros/         micro-ROS 官方的 transport / allocator（不用改）
+
 Core/Src/main.c 等         CubeMX 產生
+
 Middlewares/               FreeRTOS（CubeMX 產生）
 micro_ros_stm32cubemx_utils/   micro-ROS 函式庫（已編好）
+
 tests/host/                電腦上跑的單元測試
-tools/odom_host.py         參考用：從 count 算 (x, y, θ) 的數學
+tools/odom_host.py         從 count 算 (x, y, θ) 
 ```
 
 `main.c` 裡我們只加了三行（`#include "app.h"`、`app_init();`、`app_task();`），都在 `USER CODE` 區塊內。

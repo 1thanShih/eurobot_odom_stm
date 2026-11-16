@@ -1,3 +1,14 @@
+/*
+ * ===== 中文說明 =====
+ * 提供 POSIX 的 clock_gettime()。micro-ROS 需要它來算逾時和時間戳記，
+ * 但 newlib 在沒有作業系統的 MCU 上沒有實作，所以這裡用 FreeRTOS 的 tick 數來換算。
+ * 解析度 = 1 個 tick = 1 ms（configTICK_RATE_HZ = 1000）。
+ *
+ * 函式：
+ *   UTILS_NanosecondsToTimespec()  把奈秒數轉成 struct timespec（秒 + 奈秒），處理負數進位。
+ *   clock_gettime()                讀 FreeRTOS 的 tick 數和溢位次數，合成 64-bit 後換算成時間。
+ *                                  不管 clock_id，一律回傳開機後經過的時間。
+ */
 #include <unistd.h>
 #include <time.h>
 #include "cmsis_os.h"

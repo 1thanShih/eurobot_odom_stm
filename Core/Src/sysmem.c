@@ -1,3 +1,16 @@
+/*
+ * ===== 中文說明 =====
+ * 提供 malloc() 背後要用的 _sbrk()。malloc 需要更多記憶體時，會呼叫 _sbrk() 把 heap 往上長。
+ * 注意：這個專案裡有三塊獨立的 heap，彼此不共用：
+ *   1. 這裡的 newlib heap：給 C 標準函式庫的 malloc() 用。
+ *   2. FreeRTOS heap_4 的 heap：建立 task / queue 時用。
+ *   3. micro-ROS 的 heap（Core/Src/microros/custom_memory_manager.c）。
+ * （這個檔案沒有 USER CODE 區塊，若被 CubeMX 重新產生，這段說明可能會被蓋掉。）
+ *
+ * 函式：
+ *   _sbrk()  從 linker script 的 _end（.bss 結尾）開始往上配置，
+ *            最多長到「RAM 結尾 − _Min_Stack_Size」，超過就回傳 -1 並設 errno = ENOMEM。
+ */
 /**
  ******************************************************************************
  * @file      sysmem.c

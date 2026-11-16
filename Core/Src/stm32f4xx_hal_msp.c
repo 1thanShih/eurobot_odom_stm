@@ -16,6 +16,24 @@
   *
   ******************************************************************************
   */
+/*
+ * ===== 中文說明 =====
+ * MSP = MCU Support Package，負責周邊的「底層硬體」設定。
+ * 呼叫 HAL_XXX_Init() 時，HAL 會自動回呼這裡的 HAL_XXX_MspInit()，
+ * 用來開周邊時脈、把腳位切成 Alternate Function、設定 DMA 和中斷。
+ * 換句話說，main.c 的 MX_XXX_Init() 設「參數」，這裡設「接線」。
+ *
+ * 函式：
+ *   HAL_MspInit()                HAL_Init() 時呼叫：開 SYSCFG / PWR 時脈，
+ *                                並把 PendSV 設成最低優先權（FreeRTOS 切換 task 用）。
+ *   HAL_TIM_Encoder_MspInit()    依 Timer 開時脈，把兩支 encoder 腳設成 AF：
+ *                                TIM1 PA8/PA9、TIM2 PA0/PA1、TIM3 PA6/PA7、TIM4 PB6/PB7。
+ *   HAL_TIM_Encoder_MspDeInit()  上面的反向：關時脈、腳位還原。
+ *   HAL_UART_MspInit()           USART2：開時脈、PA2 = TX / PA3 = RX，
+ *                                RX 用 DMA1 Stream5（circular，持續收進環形 buffer），
+ *                                TX 用 DMA1 Stream6（normal，一次送一包），並開 USART2 中斷。
+ *   HAL_UART_MspDeInit()         上面的反向：關時脈、腳位還原、釋放 DMA、關中斷。
+ */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"

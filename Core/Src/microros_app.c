@@ -1,11 +1,27 @@
 /**
  * @file    microros_app.c
- * @brief   見 microros_app.h。
+ * @brief   用 micro-ROS 把 encoder 累計 count 發布到 ROS 2（topic /wheel_counts）。
+ *
+ * STM32 經 USART2（ST-LINK 虛擬 COM 埠）和電腦上的 micro-ROS agent 溝通，
+ * agent 再把資料轉進 ROS 2 網路。訊息格式見 microros_app.h。
  *
  * 連線狀態：
  *   WAITING ──ping 到 agent，建立 node/publisher──▶ CONNECTED
  *      ▲                                               │ ping 不到
  *      └──────────── 刪除 node/publisher ◀── DISCONNECTED
+ *
+ * 函式：
+ *   setup_transport_and_allocator()  開機時做一次：告訴 micro-ROS 用 UART+DMA 傳資料
+ *                                    （Core/Src/microros/dma_transport.c），
+ *                                    記憶體配置用自訂的 allocator，並把 msg.data 指向固定陣列。
+ *   entities_create()                連上 agent 後建立 support、node（odom_stm32）和
+ *                                    best-effort publisher。任何一步失敗就回傳 false。
+ *   entities_destroy()               agent 斷線時釋放 publisher、node、support。
+ *                                    不等 agent 回應，失敗也照樣釋放本地記憶體。
+ *   publish_counts()                 取 odometry 快照，填成 [stamp, pod1~4] 後發布一筆。
+ *   microros_app_task()              主迴圈，不會返回。每 ODOM_SAMPLE_PERIOD_MS 執行一次：
+ *                                    先 odom_update()，再依連線狀態找 agent、發布資料或清理，
+ *                                    LED2 顯示是否已連線。
  */
 #include "microros_app.h"
 

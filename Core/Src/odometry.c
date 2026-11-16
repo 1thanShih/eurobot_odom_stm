@@ -1,6 +1,21 @@
 /**
  * @file    odometry.c
- * @brief   見 odometry.h。
+ * @brief   讀 4 個 odometry pod 的 encoder，累計成開機以來的總 count。
+ *
+ * 每個 pod 接一個設成 Encoder mode 的 Timer，A/B 相的加減計數由硬體自己完成。
+ * 這個檔案只負責：定期讀 Timer 的 CNT、處理計數器繞回（溢位）、
+ * 乘上方向（+1/-1）後累加到 32-bit 的 total。
+ * 對外介面見 odometry.h，接線與方向設定見 robot_config.h。
+ *
+ * 函式：
+ *   odom_counter_delta()  算兩次讀值的差，正確處理繞回
+ *                         （16-bit 時 65535 → 0 算 +1；32-bit 同理）。
+ *   odom_init()           啟動 4 個 encoder timer、計數器歸零、清空累計值。
+ *                         要在 MX_TIMx_Init() 之後呼叫一次。
+ *   odom_update()         一次讀完 4 個 CNT（讓時間點盡量一致），
+ *                         記下當下的 HAL_GetTick() 當 stamp，再把差值累加進 total。
+ *                         要夠頻繁地呼叫，否則 16-bit 計數器繞回超過半圈會算錯。
+ *   odom_get_snapshot()   把最近一次 odom_update() 的 stamp 和 4 個 total 複製出去。
  */
 #include "odometry.h"
 
