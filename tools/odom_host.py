@@ -2,11 +2,12 @@
 上位機 odometry 參考實作
 ========================
 
-讀取 STM32 透過 UART 送出的 CSV，計算機器人在場地上的位姿 (x, y, θ)。
-CSV 格式定義在 Core/Inc/telemetry.h，詳細說明見 docs/odom_data_flow.html。
+⚠️ 只當參考：韌體已經改成用 micro-ROS 發布（/odom_counts），不再送 CSV，
+所以下面「開序列埠讀 CSV」的部分（parse_line、main）已經不能用。
+OdomEstimator 裡從 4 個 count 算出 (x, y, θ) 的數學仍然適用，
+之後寫上位機的 ROS 2 node 時可以直接搬過去。
 
-只適用於 CSV 模式：韌體的 robot_config.h 要設 APP_OUTPUT_MICROROS = 0。
-（micro-ROS 模式下 UART 傳的是 XRCE-DDS 封包，不是文字。）
+原本的用途：讀取 STM32 透過 UART 送出的 CSV，計算機器人在場地上的位姿 (x, y, θ)。
 
 用法：
     pip install pyserial

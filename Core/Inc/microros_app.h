@@ -1,19 +1,20 @@
-/*
- * microros_app.h
+/**
+ * @file    microros_app.h
+ * @brief   透過 micro-ROS 發布 odometry count。
  *
- * micro-ROS 連線與發布。在 FreeRTOS 的 defaultTask 裡呼叫 microros_app_task()，
- * 它不會返回。
+ * Topic : /odom_counts
+ * Type  : std_msgs/Int32MultiArray，data 固定 5 個值
+ *           data[0]   = stamp，STM32 開機後的毫秒數（讀 encoder 的時間點）
+ *           data[1~4] = pod1~4 的累計 count
+ * 週期  : ODOM_SAMPLE_PERIOD_MS（robot_config.h）
  *
- * 目前是「環境測試」版本：連上 agent 後每 100 ms 在 /stm32_test 發布一個遞增的
- * std_msgs/Int32。之後再換成 odometry 的訊息。
- *
- * LED2（板上綠燈）：
- *   熄滅 = 等待 agent
- *   亮起 = 已連線，正在發布
+ * LED2：熄滅 = 等待 agent，亮起 = 已連線。
+ * agent 晚開或中途斷線都會自動重連，不用按 RESET。
  */
 #ifndef MICROROS_APP_H
 #define MICROROS_APP_H
 
+/** 在 FreeRTOS task 裡呼叫，不會返回。 */
 void microros_app_task(void);
 
 #endif /* MICROROS_APP_H */

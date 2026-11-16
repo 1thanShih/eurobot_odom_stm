@@ -1,6 +1,5 @@
-/* 假的 HAL：只提供 odometry.c / telemetry.c 用到的東西，讓它們能在電腦上跑 */
+/* 假的 HAL：只提供 odometry.c 用到的東西，讓它能在電腦上編譯 */
 #include <stdint.h>
-#include <string.h>
 typedef enum { HAL_OK = 0, HAL_ERROR } HAL_StatusTypeDef;
 typedef struct { int dummy; } TIM_TypeDef;
 extern TIM_TypeDef fake_tim[6];
@@ -10,11 +9,9 @@ extern TIM_TypeDef fake_tim[6];
 #define TIM4 (&fake_tim[4])
 #define TIM5 (&fake_tim[5])
 typedef struct { TIM_TypeDef *Instance; uint32_t cnt; int started; } TIM_HandleTypeDef;
-typedef struct { int dummy; } UART_HandleTypeDef;
 #define TIM_CHANNEL_ALL 0x3C
 #define __HAL_TIM_GET_COUNTER(h) ((h)->cnt)
 #define __HAL_TIM_SET_COUNTER(h, v) ((h)->cnt = (v))
 HAL_StatusTypeDef HAL_TIM_Encoder_Start(TIM_HandleTypeDef *h, uint32_t ch);
-HAL_StatusTypeDef HAL_UART_Transmit(UART_HandleTypeDef *u, const uint8_t *d, uint16_t n, uint32_t t);
 uint32_t HAL_GetTick(void);
 void Error_Handler(void);
