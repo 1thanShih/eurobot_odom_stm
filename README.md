@@ -21,7 +21,7 @@ odometry pod ×4 ──encoder──▶ STM32F446RE ──UART CSV (115200)─�
 | pod4 | TIM4  | PB6 / PB7    | 16-bit |
 
 - UART：USART2，PA2 (TX) / PA3 (RX)，115200 baud，8N1。插 USB 就會出現虛擬 COM port。
-- 腳位設定在 [`Eurobot odometry.ioc`](Eurobot%20odometry.ioc)，接線表在 [`Core/Src/odometry.c`](Core/Src/odometry.c)，兩邊要一致。
+- 腳位設定在 [`eurobot_odom_stm.ioc`](eurobot_odom_stm.ioc)，接線表在 [`Core/Src/odometry.c`](Core/Src/odometry.c)，兩邊要一致。
 
 ## 專案結構
 
@@ -43,7 +43,7 @@ CubeMX 重新產生程式碼也不會被蓋掉。
 
 1. 用 **STM32CubeIDE** 開啟：`File → Import → Existing Projects into Workspace`，選這個資料夾。
 2. `Project → Build Project`。
-3. 接上 Nucleo，用 `Eurobot odometry.launch` 執行 Run / Debug 燒錄。
+3. 接上 Nucleo，用 `eurobot_odom_stm.launch` 執行 Run / Debug 燒錄。
 
 ## 參數設定
 

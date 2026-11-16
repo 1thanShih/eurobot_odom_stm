@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <projectDescription>
-	<name>Eurobot odometry</name>
+	<name>eurobot_odom_stm</name>
 	<comment></comment>
 	<projects>
 	</projects>
