@@ -16,9 +16,16 @@
 #define ODOM_POD3_DIRECTION      (+1)
 #define ODOM_POD4_DIRECTION      (+1)
 
+/* ---- 輸出方式 ---------------------------------------------------------- */
+/* USART2 一次只能給一種用途：
+ *   1 = micro-ROS（需要上位機跑 micro-ROS agent）
+ *   0 = CSV 模式：每 ODOM_SAMPLE_PERIOD_MS 送一行文字，可直接用序列埠工具或
+ *       tools/odom_host.py 看，適合除錯 */
+#define APP_OUTPUT_MICROROS      1
+
 /* ---- 取樣與傳輸 -------------------------------------------------------- */
-/* 一行 CSV 約 65~80 bytes，115200 baud 約需 6~7 ms，必須小於取樣週期。
- * 若要提高取樣率，需同時提高 baud rate（CubeMX 的 USART2 與上位機都要改）。 */
+/* USART2 = 460800 baud（在 .ioc 設定）。一行 CSV 約 65~80 bytes，約需 1.5~2 ms，
+ * 必須小於取樣週期。改 baud rate 時，CubeMX 和上位機要一起改。 */
 #define ODOM_SAMPLE_PERIOD_MS       10U
 #define TELEMETRY_UART_TIMEOUT_MS   100U
 

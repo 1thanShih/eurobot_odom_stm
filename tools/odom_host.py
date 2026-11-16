@@ -5,6 +5,9 @@
 讀取 STM32 透過 UART 送出的 CSV，計算機器人在場地上的位姿 (x, y, θ)。
 CSV 格式定義在 Core/Inc/telemetry.h，詳細說明見 docs/odom_data_flow.html。
 
+只適用於 CSV 模式：韌體的 robot_config.h 要設 APP_OUTPUT_MICROROS = 0。
+（micro-ROS 模式下 UART 傳的是 XRCE-DDS 封包，不是文字。）
+
 用法：
     pip install pyserial
     python tools/odom_host.py COM5            # Windows（COM 編號看裝置管理員）
@@ -17,6 +20,8 @@ CSV 格式定義在 Core/Inc/telemetry.h，詳細說明見 docs/odom_data_flow.h
 import math
 import sys
 from dataclasses import dataclass
+
+BAUD = 460800   # 要和 CubeMX 的 USART2 設定一致
 
 # ============================================================================
 # 1. 機構參數：依實際安裝修改，並實測校正
@@ -166,7 +171,7 @@ def main():
     import serial   # pip install pyserial
 
     odom = OdomEstimator()
-    with serial.Serial(sys.argv[1], 115200, timeout=1) as ser:
+    with serial.Serial(sys.argv[1], BAUD, timeout=1) as ser:
         ser.reset_input_buffer()               # 丟掉開 port 前累積的舊資料
         n = 0
         while True:

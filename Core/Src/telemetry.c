@@ -23,15 +23,20 @@ void telemetry_send_odom(const OdomSnapshot *snap)
     uint8_t this_seq = seq++;
 
     int n = snprintf(buf, sizeof(buf),
-                     "%u,%lu,"
-                     "%ld,%ld,%ld,%ld,"
-                     "%ld,%ld,%ld,%ld,"
-                     "%.2f,%.2f,%.2f,%.2f\r\n",
+                     "%u,%lu,"                      /* seq, ts_ms        */
+                     "%ld,%ld,%ld,%ld,"             /* total1..4         */
+                     "%ld,%ld,%ld,%ld,"             /* delta1..4         */
+                     "%.2f,%.2f,%.2f,%.2f\r\n",     /* mm1..4            */
+
+                     /* seq, ts_ms */
                      (unsigned)this_seq, (unsigned long)snap->timestamp_ms,
+                     /* total1..4 */
                      (long)snap->total[ODOM_POD_1], (long)snap->total[ODOM_POD_2],
                      (long)snap->total[ODOM_POD_3], (long)snap->total[ODOM_POD_4],
+                     /* delta1..4 */
                      (long)snap->delta[ODOM_POD_1], (long)snap->delta[ODOM_POD_2],
                      (long)snap->delta[ODOM_POD_3], (long)snap->delta[ODOM_POD_4],
+                     /* mm1..4 */
                      odom_counts_to_mm(snap->total[ODOM_POD_1]),
                      odom_counts_to_mm(snap->total[ODOM_POD_2]),
                      odom_counts_to_mm(snap->total[ODOM_POD_3]),

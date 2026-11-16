@@ -2,6 +2,8 @@
  * @file    telemetry.h
  * @brief   透過 USART2（Nucleo 的 USB 虛擬 COM port）把資料送給上位機。
  *
+ * 只在 CSV 模式（robot_config.h 的 APP_OUTPUT_MICROROS = 0）使用。
+ *
  * 輸出格式：每行一筆 CSV，以 "\r\n" 結尾，共 14 個欄位：
  *
  *   seq, ts_ms,
@@ -19,7 +21,7 @@
 
 #include "odometry.h"
 
-/** 將一筆 odometry 資料以 CSV 格式送出（阻塞式，約 6~7 ms）。 */
+/** 將一筆 odometry 資料以 CSV 格式送出（阻塞式，460800 baud 下約 1.5~2 ms）。 */
 void telemetry_send_odom(const OdomSnapshot *snap);
 
 #endif /* TELEMETRY_H */
