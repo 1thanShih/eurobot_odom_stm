@@ -14,8 +14,9 @@
  *   setup_transport_and_allocator()  開機時做一次：告訴 micro-ROS 用 UART+DMA 傳資料
  *                                    （Core/Src/microros/dma_transport.c），
  *                                    記憶體配置用自訂的 allocator，並把 msg.data 指向固定陣列。
- *   entities_create()                連上 agent 後建立 support、node（odom_stm32）和
- *                                    best-effort publisher。任何一步失敗就回傳 false。
+ *   entities_create()                連上 agent 後建立 support（domain ID = ROS_DOMAIN_ID）、
+ *                                    node（odom_stm32）和 best-effort publisher。
+ *                                    任何一步失敗就回傳 false。
  *   entities_destroy()               agent 斷線時釋放 publisher、node、support。
  *                                    不等 agent 回應，失敗也照樣釋放本地記憶體。
  *   publish_counts()                 取 odometry 快照，填成 [stamp, pod1~4] 後發布一筆。
@@ -40,6 +41,7 @@
 
 #define NODE_NAME          "odom_stm32"
 #define TOPIC_NAME         "wheel_counts"
+#define ROS_DOMAIN_ID      4U      /* 主機端 ROS_DOMAIN_ID 要設成一樣才看得到 topic */
 #define MSG_LEN            (1 + ODOM_POD_COUNT)   /* stamp + 4 個 count */
 #define RETRY_PERIOD_MS    500U    /* 等待時多久找一次 agent */
 #define PING_PERIOD_MS     1000U   /* 連線中多久確認一次 agent 還在 */
@@ -99,7 +101,17 @@ static bool entities_create(void)
     node      = rcl_get_zero_initialized_node();
     publisher = rcl_get_zero_initialized_publisher();
 
-    if (rclc_support_init(&support, 0, NULL, &allocator) != RCL_RET_OK) {
+    /* 設定 domain ID；rcl_init 會複製一份 options，用完就可以釋放 */
+    rcl_init_options_t init_opts = rcl_get_zero_initialized_init_options();
+    if (rcl_init_options_init(&init_opts, allocator) != RCL_RET_OK) {
+        return false;
+    }
+    rcl_ret_t ret = rcl_init_options_set_domain_id(&init_opts, ROS_DOMAIN_ID);
+    if (ret == RCL_RET_OK) {
+        ret = rclc_support_init_with_options(&support, 0, NULL, &init_opts, &allocator);
+    }
+    IGNORE_RESULT(rcl_init_options_fini(&init_opts));
+    if (ret != RCL_RET_OK) {
         return false;
     }
     if (rclc_node_init_default(&node, NODE_NAME, "", &support) != RCL_RET_OK) {
