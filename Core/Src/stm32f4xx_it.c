@@ -34,6 +34,8 @@
  *   DMA1_Stream6_IRQHandler()  USART2 TX 的 DMA 中斷。傳完後 HAL 會把 UART 狀態改回 READY，
  *                              micro-ROS 的送出函式就是在等這件事。
  *   USART2_IRQHandler()        USART2 本身的中斷（錯誤、傳送完成等），交給 HAL_UART_IRQHandler()。
+ *   EXTI4_IRQHandler()         外部中斷 4 = BNO085 的 INT（PB4）。HAL 會呼叫 imu.c 的
+ *                              HAL_GPIO_EXTI_Callback()，叫醒 IMU task 去讀資料。
  *   EXTI15_10_IRQHandler()     外部中斷 10~15，這裡是板子上的藍色 USER 按鈕（PC13）。
  *                              目前沒有處理按下的動作。
  *   TIM6_DAC_IRQHandler()      TIM6 每 1 ms 一次，最後會呼叫 HAL_IncTick()。
@@ -184,6 +186,20 @@ void DebugMon_Handler(void)
 /* For the available peripheral interrupt handler names,                      */
 /* please refer to the startup file (startup_stm32f4xx.s).                    */
 /******************************************************************************/
+
+/**
+  * @brief This function handles EXTI line 4 interrupt.
+  */
+void EXTI4_IRQHandler(void)
+{
+  /* USER CODE BEGIN EXTI4_IRQn 0 */
+
+  /* USER CODE END EXTI4_IRQn 0 */
+  HAL_GPIO_EXTI_IRQHandler(IMU_INT_Pin);
+  /* USER CODE BEGIN EXTI4_IRQn 1 */
+
+  /* USER CODE END EXTI4_IRQn 1 */
+}
 
 /**
   * @brief This function handles DMA1 stream5 global interrupt.
