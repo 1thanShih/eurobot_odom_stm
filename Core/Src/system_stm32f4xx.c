@@ -8,7 +8,7 @@
  *   SystemCoreClock          目前的核心時脈（Hz），HAL 和 FreeRTOS 都會讀它。
  *
  * 函式：
- *   SystemInit()             reset 後由 startup_stm32f446retx.s 呼叫（在 main() 之前）：
+ *   SystemInit()             reset 後由 startup_stm32f411ceux.s 呼叫（在 main() 之前）：
  *                            開啟 FPU（浮點運算單元），必要時設定向量表位置。
  *   SystemCoreClockUpdate()  讀 RCC 暫存器重新計算 SystemCoreClock。改時脈後要呼叫，HAL 會自動做。
  *   SystemInit_ExtMemCtl()   設定外接 SRAM / SDRAM。只有定義 DATA_IN_ExtSRAM / ExtSDRAM 才會編譯，

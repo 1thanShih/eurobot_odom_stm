@@ -8,12 +8,12 @@
  *           data[1~4] = pod1~4 的累計 count
  * 週期  : ODOM_SAMPLE_PERIOD_MS（robot_config.h）
  *
- * Topic : /imu
- * Type  : sensor_msgs/Imu，frame_id = imu_link
- *           header.stamp = 姿態取樣時間（STM32 開機時間，和上面的 stamp 同一個時鐘）
- * 週期  : 有新資料才發，約 IMU_REPORT_PERIOD_US（robot_config.h）；沒接 IMU 就不發
+ * Topic : /imu/data_raw（sensor_msgs/Imu）、/imu/mag（sensor_msgs/MagneticField），frame_id = imu_link
+ *           BNO055 的原始值，沒有姿態（orientation_covariance[0] = -1），姿態由上位機融合
+ *           header.stamp = 和同一週期 /wheel_counts 的 data[0] 完全相同
+ * 週期  : 每讀一次 encoder 就各發一筆（ODOM_SAMPLE_PERIOD_MS）；沒接 IMU 就不發
  *
- * LED2：熄滅 = 等待 agent，亮起 = 已連線。
+ * 板上 LED（PC13）：熄滅 = 等待 agent，亮起 = 已連線。
  * agent 晚開或中途斷線都會自動重連，不用按 RESET。
  */
 #ifndef MICROROS_APP_H

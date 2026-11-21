@@ -29,8 +29,6 @@ extern "C" {
 /* Includes ------------------------------------------------------------------*/
 #include "stm32f4xx_hal.h"
 
-#include "stm32f4xx_nucleo.h"
-
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
@@ -48,6 +46,10 @@ extern "C" {
 
 /* Exported macro ------------------------------------------------------------*/
 /* USER CODE BEGIN EM */
+/* 板上 LED（PC13）：低電位亮 */
+#define LED_ON()      HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET)
+#define LED_OFF()     HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET)
+#define LED_TOGGLE()  HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin)
 
 /* USER CODE END EM */
 
@@ -59,16 +61,8 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
-#define USART_TX_Pin GPIO_PIN_2
-#define USART_TX_GPIO_Port GPIOA
-#define USART_RX_Pin GPIO_PIN_3
-#define USART_RX_GPIO_Port GPIOA
-#define TMS_Pin GPIO_PIN_13
-#define TMS_GPIO_Port GPIOA
-#define TCK_Pin GPIO_PIN_14
-#define TCK_GPIO_Port GPIOA
-#define SWO_Pin GPIO_PIN_3
-#define SWO_GPIO_Port GPIOB
+#define LED_Pin GPIO_PIN_13
+#define LED_GPIO_Port GPIOC
 #define IMU_INT_Pin GPIO_PIN_4
 #define IMU_INT_GPIO_Port GPIOB
 #define IMU_INT_EXTI_IRQn EXTI4_IRQn

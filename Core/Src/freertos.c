@@ -25,7 +25,7 @@
  *
  * 函式：
  *   vApplicationStackOverflowHook()  task 的 stack 爆掉時呼叫：記下 task 名稱、
- *                                    關中斷、LED2 快閃並停住。
+ *                                    關中斷、LED（PC13）快閃並停住。
  *   vApplicationMallocFailedHook()   heap 配置失敗時呼叫：只累計次數，不停機。
  */
 /* USER CODE END Header */
@@ -73,14 +73,14 @@ void vApplicationMallocFailedHook(void);
 
 /* USER CODE BEGIN 4 */
 /* FreeRTOS 切換 task 時發現 stack 爆掉會呼叫這裡。
- * 記憶體可能已經被破壞，不能繼續跑：關中斷、LED2 快閃，停在這裡。 */
+ * 記憶體可能已經被破壞，不能繼續跑：關中斷、LED 快閃，停在這裡。 */
 void vApplicationStackOverflowHook(xTaskHandle xTask, signed char *pcTaskName)
 {
     (void)xTask;
     rtos_overflow_task = (const char *)pcTaskName;
     taskDISABLE_INTERRUPTS();
     for (;;) {
-        BSP_LED_Toggle(LED2);
+        LED_TOGGLE();
         for (volatile uint32_t i = 0; i < 1000000U; i++) {
             /* 忙等，不依賴任何中斷或 RTOS */
         }

@@ -17,7 +17,7 @@
   */
 /*
  * ===== 中文說明 =====
- * 中斷服務函式（ISR）。函式名稱要和向量表（startup_stm32f446retx.s）一致，
+ * 中斷服務函式（ISR）。函式名稱要和向量表（startup_stm32f411ceux.s）一致，
  * 中斷發生時硬體會直接跳過來。這裡通常只轉呼叫 HAL 的 IRQHandler，
  * 由 HAL 判斷原因後再呼叫對應的 callback。
  * SVC / PendSV / SysTick 不在這裡，它們由 FreeRTOS 提供。
@@ -30,15 +30,12 @@
  *   BusFault_Handler()         匯流排存取錯誤，停在迴圈。
  *   UsageFault_Handler()       非法指令、未對齊存取等，停在迴圈。
  *   DebugMon_Handler()         debug monitor，空的。
- *   DMA1_Stream5_IRQHandler()  USART2 RX 的 DMA 中斷，交給 HAL_DMA_IRQHandler()。
- *   DMA1_Stream6_IRQHandler()  USART2 TX 的 DMA 中斷。傳完後 HAL 會把 UART 狀態改回 READY，
- *                              micro-ROS 的送出函式就是在等這件事。
- *   USART2_IRQHandler()        USART2 本身的中斷（錯誤、傳送完成等），交給 HAL_UART_IRQHandler()。
- *   EXTI4_IRQHandler()         外部中斷 4 = BNO085 的 INT（PB4）。HAL 會呼叫 imu.c 的
- *                              HAL_GPIO_EXTI_Callback()，叫醒 IMU task 去讀資料。
- *   EXTI15_10_IRQHandler()     外部中斷 10~15，這裡是板子上的藍色 USER 按鈕（PC13）。
- *                              目前沒有處理按下的動作。
- *   TIM6_DAC_IRQHandler()      TIM6 每 1 ms 一次，最後會呼叫 HAL_IncTick()。
+ *   EXTI4_IRQHandler()         外部中斷 4 = IMU 的 INT（PB4）。BNO055 不用 INT，callback 沒有實作。
+ *   TIM1_TRG_COM_TIM11_IRQHandler()
+ *                              TIM11 每 1 ms 一次，最後會呼叫 HAL_IncTick()。
+ *                              TIM1 也共用這個中斷，但 TIM1 是 encoder，沒開中斷，不會進來。
+ *   OTG_FS_IRQHandler()        USB（Type-C）中斷，交給 HAL_PCD_IRQHandler()。
+ *                              收到資料時 USB 函式庫會呼叫 usb_cdc_transport.c 的接收函式。
  */
 /* USER CODE END Header */
 
@@ -80,10 +77,9 @@
 /* USER CODE END 0 */
 
 /* External variables --------------------------------------------------------*/
-extern DMA_HandleTypeDef hdma_usart2_rx;
-extern DMA_HandleTypeDef hdma_usart2_tx;
-extern UART_HandleTypeDef huart2;
-extern TIM_HandleTypeDef htim6;
+extern PCD_HandleTypeDef hpcd_USB_OTG_FS;
+extern TIM_HandleTypeDef htim1;
+extern TIM_HandleTypeDef htim11;
 
 /* USER CODE BEGIN EV */
 
@@ -188,7 +184,7 @@ void DebugMon_Handler(void)
 /******************************************************************************/
 
 /**
-  * @brief This function handles EXTI line 4 interrupt.
+  * @brief This function handles EXTI line4 interrupt.
   */
 void EXTI4_IRQHandler(void)
 {
@@ -202,73 +198,32 @@ void EXTI4_IRQHandler(void)
 }
 
 /**
-  * @brief This function handles DMA1 stream5 global interrupt.
+  * @brief This function handles TIM1 trigger and commutation interrupts and TIM11 global interrupt.
   */
-void DMA1_Stream5_IRQHandler(void)
+void TIM1_TRG_COM_TIM11_IRQHandler(void)
 {
-  /* USER CODE BEGIN DMA1_Stream5_IRQn 0 */
+  /* USER CODE BEGIN TIM1_TRG_COM_TIM11_IRQn 0 */
 
-  /* USER CODE END DMA1_Stream5_IRQn 0 */
-  HAL_DMA_IRQHandler(&hdma_usart2_rx);
-  /* USER CODE BEGIN DMA1_Stream5_IRQn 1 */
+  /* USER CODE END TIM1_TRG_COM_TIM11_IRQn 0 */
+  HAL_TIM_IRQHandler(&htim1);
+  HAL_TIM_IRQHandler(&htim11);
+  /* USER CODE BEGIN TIM1_TRG_COM_TIM11_IRQn 1 */
 
-  /* USER CODE END DMA1_Stream5_IRQn 1 */
+  /* USER CODE END TIM1_TRG_COM_TIM11_IRQn 1 */
 }
 
 /**
-  * @brief This function handles DMA1 stream6 global interrupt.
+  * @brief This function handles USB On The Go FS global interrupt.
   */
-void DMA1_Stream6_IRQHandler(void)
+void OTG_FS_IRQHandler(void)
 {
-  /* USER CODE BEGIN DMA1_Stream6_IRQn 0 */
+  /* USER CODE BEGIN OTG_FS_IRQn 0 */
 
-  /* USER CODE END DMA1_Stream6_IRQn 0 */
-  HAL_DMA_IRQHandler(&hdma_usart2_tx);
-  /* USER CODE BEGIN DMA1_Stream6_IRQn 1 */
+  /* USER CODE END OTG_FS_IRQn 0 */
+  HAL_PCD_IRQHandler(&hpcd_USB_OTG_FS);
+  /* USER CODE BEGIN OTG_FS_IRQn 1 */
 
-  /* USER CODE END DMA1_Stream6_IRQn 1 */
-}
-
-/**
-  * @brief This function handles USART2 global interrupt.
-  */
-void USART2_IRQHandler(void)
-{
-  /* USER CODE BEGIN USART2_IRQn 0 */
-
-  /* USER CODE END USART2_IRQn 0 */
-  HAL_UART_IRQHandler(&huart2);
-  /* USER CODE BEGIN USART2_IRQn 1 */
-
-  /* USER CODE END USART2_IRQn 1 */
-}
-
-/**
-  * @brief This function handles EXTI line[15:10] interrupts.
-  */
-void EXTI15_10_IRQHandler(void)
-{
-  /* USER CODE BEGIN EXTI15_10_IRQn 0 */
-
-  /* USER CODE END EXTI15_10_IRQn 0 */
-  HAL_GPIO_EXTI_IRQHandler(USER_BUTTON_PIN);
-  /* USER CODE BEGIN EXTI15_10_IRQn 1 */
-
-  /* USER CODE END EXTI15_10_IRQn 1 */
-}
-
-/**
-  * @brief This function handles TIM6 global interrupt and DAC1, DAC2 underrun error interrupts.
-  */
-void TIM6_DAC_IRQHandler(void)
-{
-  /* USER CODE BEGIN TIM6_DAC_IRQn 0 */
-
-  /* USER CODE END TIM6_DAC_IRQn 0 */
-  HAL_TIM_IRQHandler(&htim6);
-  /* USER CODE BEGIN TIM6_DAC_IRQn 1 */
-
-  /* USER CODE END TIM6_DAC_IRQn 1 */
+  /* USER CODE END OTG_FS_IRQn 1 */
 }
 
 /* USER CODE BEGIN 1 */

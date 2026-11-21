@@ -22,7 +22,7 @@ import math
 import sys
 from dataclasses import dataclass
 
-BAUD = 1000000  # 要和 CubeMX 的 USART2 設定一致
+BAUD = 115200  # Black Pill 走 USB CDC，鮑率沒有作用，隨便填
 
 # ============================================================================
 # 1. 機構參數：依實際安裝修改，並實測校正
