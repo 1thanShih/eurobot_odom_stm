@@ -28,7 +28,7 @@ odometry pod ×4 and imu(BNO055) -> STM32F411CE Type-C USB (micro-ROS) -> micro-
 4. 看資料（**一定要設 `ROS_DOMAIN_ID=4`**）：
    ```bash
    export ROS_DOMAIN_ID=4
-   ros2 topic list                                   # 應該有 /wheel_counts、/imu/data_raw、/imu/mag
+   ros2 topic list                                   # 應該有 /wheel_counts、/imu/data_raw
    ros2 topic hz /wheel_counts                       # 約 100 Hz
    ros2 topic echo /imu/data_raw --qos-reliability best_effort
    ```
@@ -55,7 +55,7 @@ odometry pod ×4 and imu(BNO055) -> STM32F411CE Type-C USB (micro-ROS) -> micro-
 
 ### IMU：原始值，姿態由上位機融合
 
-BNO055 跑在 **AMG 模式**：只給加速度計、磁力計、陀螺儀的原始值，**不做融合、沒有姿態**。
+BNO055 跑在 **ACCGYRO 模式**：只開加速度計和陀螺儀（磁力計關閉），**不做融合、沒有姿態**。
 topic 名稱和格式照 [`imu_tools`](https://github.com/CCNYRoboticsLab/imu_tools) 的慣例，可以直接接 `imu_filter_madgwick`（見 [4.5](#45-建議的上位機架構)）。
 
 #### `/imu/data_raw`（`sensor_msgs/Imu`，`frame_id` = `imu_link`）
@@ -68,23 +68,15 @@ topic 名稱和格式照 [`imu_tools`](https://github.com/CCNYRoboticsLab/imu_to
 | `linear_acceleration` | 加速度（m/s²，**含重力**，靜止平放時 z ≈ 9.8） |
 | 共變異數 | 只填對角線，估計值（`robot_config.h` 的 `IMU_*_VAR`） |
 
-#### `/imu/mag`（`sensor_msgs/MagneticField`，`frame_id` = `imu_link`）
-
-| 欄位 | 內容 |
-|------|------|
-| `header.stamp` | 和 `/imu/data_raw`、`/wheel_counts` 同一個 stamp |
-| `magnetic_field` | 磁場（**T**，地磁大小約 25～65 µT = 2.5e-5～6.5e-5 T） |
-| 共變異數 | 全 0（= 未知） |
-
-感測器自己的更新率（BNO055 預設值）：**加速度 125 Hz、角速度 100 Hz、磁力 20 Hz**。
-我們每 10 ms 讀一次，所以磁場通常連續 5 筆左右一樣，角速度、加速度偶爾也會和上一筆一樣，都是正常的。
+感測器自己的更新率（BNO055 預設值）：**加速度 125 Hz、角速度 100 Hz**。
+我們每 10 ms 讀一次，所以角速度、加速度偶爾會和上一筆一樣，是正常的。
 
 ### 時間戳要注意
 
 - **stamp 是 STM32 開機時間，不是 ROS 時間。** 例如 `header.stamp.sec = 36` 代表開機後 36 秒。
   拿來互相配對、算 dt 沒問題；要交給 `robot_localization` 等套件前必須先換成 ROS 時間（見 [4.4](#44-換成-ros-時間)）。
 - IMU 和 `/wheel_counts` 的 stamp 一樣，但 **IMU 的數值本身會比 encoder 舊一點**：
-  感測器有自己的更新率，和我們讀取的時間不同步，角速度最多舊約 10 ms、磁場最多舊約 50 ms，下位機無法消除。
+  感測器有自己的更新率，和我們讀取的時間不同步，角速度最多舊約 10 ms、加速度最多舊約 8 ms，下位機無法消除。
   靜止或直線影響很小；高速旋轉時（例如 3 rad/s）約等於 1° 以內的瞬間誤差。
 - 某一筆的間隔偶爾會到約 20 ms（下位機每秒 ping 一次 agent），**dt 一律用 stamp 相減**，不要假設固定 10 ms。
 
@@ -113,11 +105,10 @@ topic 名稱和格式照 [`imu_tools`](https://github.com/CCNYRoboticsLab/imu_to
 
 | 狀況 | 下位機行為 | 上位機看到的 |
 |------|-----------|-------------|
-| 正常 | 每週期讀一筆 | `/imu/data_raw`、`/imu/mag` 各 100 Hz |
+| 正常 | 每週期讀一筆 | `/imu/data_raw` 100 Hz |
 | 沒接 / 沒電 / SDA、SCL 不通 | 每 1 s 重試一次（重置 + 在 0x28、0x29 找晶片） | **只有 `/wheel_counts`，沒有 IMU topic**（odometry 不受影響） |
 | 連續 10 次 I2C 讀取失敗，或 BNO055 自己重開機 | 重置 BNO055 並重新初始化（約 0.7 s） | IMU topic 中斷約 0.7 s 後恢復 |
-| 角速度靜止時不是 0 | AMG 模式給的是原始值，下位機**不做陀螺儀零點校正** | 上位機要處理零點偏移（madgwick 有 `zeta` 參數可以慢慢修正，或開機時靜止幾秒取平均扣掉） |
-| 磁場數值怪、轉向時跳動 | 磁力計會被馬達、磁鐵、鐵件、大電流影響，下位機也**不做磁力計校正** | 上位機要做 hard/soft-iron 校正；干擾太大就別用磁力計（madgwick 設 `use_mag: false`） |
+| 角速度靜止時不是 0 | ACCGYRO 模式給的是原始值，下位機**不做陀螺儀零點校正** | 上位機要處理零點偏移（madgwick 有 `zeta` 參數可以慢慢修正，或開機時靜止幾秒取平均扣掉） |
 
 > **上位機注意：** IMU topic 中斷再恢復時，下位機只是重新初始化 BNO055，原始值的意義不變；
 > 但如果上位機的融合濾波器在中斷期間沒有資料，記得檢查它恢復後是否正常。
@@ -143,7 +134,6 @@ topic 名稱和格式照 [`imu_tools`](https://github.com/CCNYRoboticsLab/imu_to
 from rclpy.qos import qos_profile_sensor_data   # best effort
 self.create_subscription(Int32MultiArray, '/wheel_counts', self.on_wheel, qos_profile_sensor_data)
 self.create_subscription(Imu, '/imu/data_raw', self.on_imu, qos_profile_sensor_data)
-self.create_subscription(MagneticField, '/imu/mag', self.on_mag, qos_profile_sensor_data)
 ```
 執行前要 `export ROS_DOMAIN_ID=4`。
 
@@ -158,10 +148,9 @@ self.create_subscription(MagneticField, '/imu/mag', self.on_mag, qos_profile_sen
 
 `/wheel_counts` 沒有 header，`message_filters` 不能用，請**自己用 stamp 配對**：
 
-- 下位機每週期依序發 `/wheel_counts`、`/imu/data_raw`、`/imu/mag`，所以通常 wheel 會先到。
+- 下位機每週期依序發 `/wheel_counts`、`/imu/data_raw`，所以通常 wheel 會先到。
 - 在 `on_wheel` 裡把 `(stamp → counts)` 存進一個小字典（留最近幾十筆）；`on_imu` 收到時用 `header.stamp` 換回 ms 去找。
 - IMU 沒接時不會有 IMU topic，odometry 計算不要等 IMU。
-- `/imu/data_raw` 和 `/imu/mag` 的 stamp 也一樣，`message_filters` 的 `TimeSynchronizer` 可以直接配對這兩個。
 
 ```python
 def on_wheel(self, msg):
@@ -205,19 +194,17 @@ def to_ros_ns(self, stamp_ms):
 | 輸入 | 輸出 | 內容 |
 |------|------|------|
 | `/wheel_counts` | `/odom/wheel`（`nav_msgs/Odometry`）+ TF `odom → base_link` | 4.2 算出的位姿與速度，stamp 換成 ROS 時間 |
-| `/imu/data_raw`、`/imu/mag` | 同名 topic（例如 `/stm/imu/data_raw`、`/stm/imu/mag`） | 同樣的內容，stamp 換成 ROS 時間 |
+| `/imu/data_raw` | 同名 topic（例如 `/stm/imu/data_raw`） | 同樣的內容，stamp 換成 ROS 時間 |
 | — | static TF `base_link → imu_link` | IMU 的實際安裝位置與方向 |
 
 姿態用 `imu_filter_madgwick` 算（`sudo apt install ros-humble-imu-filter-madgwick`）：
 ```bash
 ros2 run imu_filter_madgwick imu_filter_madgwick_node --ros-args \
-  -r imu/data_raw:=/stm/imu/data_raw -r imu/mag:=/stm/imu/mag \
+  -r imu/data_raw:=/stm/imu/data_raw \
   -p use_mag:=false -p world_frame:=enu -p publish_tf:=false
 # 輸出 /imu/data（有 orientation 的 sensor_msgs/Imu）
 ```
-- `use_mag: false`：只用陀螺儀 + 加速度計，yaw 會慢慢漂，但不怕馬達干擾。
-- `use_mag: true`：yaw 用磁北當基準不會漂，但**場地上的磁場干擾通常很大**，請先實測（靜止時轉一圈看 yaw 準不準、開馬達時會不會跳）。
-- 磁力計要先在上位機做 hard/soft-iron 校正（例如 `imu_tools` 的方法或自己擬合橢球），否則 `use_mag: true` 的 yaw 會偏。
+- 下位機不送磁場，一定要 `use_mag: false`：只用陀螺儀 + 加速度計，yaw 會慢慢漂，但不怕馬達干擾。
 
 如果再用 `robot_localization` 融合 odometry 和 IMU：
 - 用 madgwick 輸出的 `/imu/data`。不用磁力計時 yaw 會漂，建議**只融合 yaw rate（`angular_velocity` 的 z）**，或用 `imu0_relative: true`。
@@ -248,10 +235,10 @@ ros2 run tf2_ros static_transform_publisher --x 0 --y 0 --z 0.1 \
 
 | 位置 | 設定 | 值 |
 |------|------|----|
-| `microros_app.c` | Node / topic 名稱 | `odom_stm32`、`wheel_counts`、`imu/data_raw`、`imu/mag`，`frame_id` = `imu_link` |
+| `microros_app.c` | Node / topic 名稱 | `odom_stm32`、`wheel_counts`、`imu/data_raw`，`frame_id` = `imu_link` |
 | `microros_app.c` | `ROS_DOMAIN_ID` | 4 |
 | `microros_app.c` | 等待時找 agent 的間隔 / 連線中確認的間隔 | 500 ms / 1000 ms（確認失敗 3 次 × 50 ms 才算斷線） |
-| `imu.c` | BNO055 模式 | AMG（0x07，原始值不融合），角速度單位 rad/s，用外部 32.768 kHz 石英；感測器設定用 BNO055 預設值 |
+| `imu.c` | BNO055 模式 | ACCGYRO（0x05，原始值不融合，磁力計關閉），角速度單位 rad/s，用外部 32.768 kHz 石英；感測器設定用 BNO055 預設值 |
 | `imu.c` | 找不到 IMU 的重試間隔 / 失敗幾次重新初始化 / 檢查狀態間隔 | 1000 ms / 連續 10 次 / 每 100 筆（約 1 s） |
 | `imu_hal.c` | I2C 位址 | 先試 0x28，再試 0x29 |
 | `usb_cdc_transport.c` | USB 送出 | 非阻塞：先放進 2 KB 的 TX buffer 就返回；buffer 滿了最多等 10 ms，還是不夠就丟掉那一筆（電腦沒在讀時不會卡住） |
@@ -346,7 +333,7 @@ tools/odom_host.py         從 count 算 (x, y, θ) 的數學（參考用）
 
 1. micro-ROS task 讀 4 個 encoder，記下 stamp。
 2. 通知 IMU task（優先權較高，會馬上執行）讀 BNO055，用同一個 stamp 存起來（約 1 ms）。
-3. micro-ROS task 依序發布 `/wheel_counts`、`/imu/data_raw`、`/imu/mag`（放進 USB 的 TX buffer 就返回，不等電腦收完）。
+3. micro-ROS task 依序發布 `/wheel_counts`、`/imu/data_raw`（放進 USB 的 TX buffer 就返回，不等電腦收完）。
 
 ---
 

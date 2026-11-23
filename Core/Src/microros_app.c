@@ -1,6 +1,6 @@
 /**
  * @file    microros_app.c
- * @brief   用 micro-ROS 把 encoder 累計 count（/wheel_counts）和 IMU 原始資料（/imu/data_raw、/imu/mag）發布到 ROS 2。
+ * @brief   用 micro-ROS 把 encoder 累計 count（/wheel_counts）和 IMU 原始資料（/imu/data_raw）發布到 ROS 2。
  *
  * STM32 經 Type-C（USB CDC 虛擬 COM 埠）和電腦上的 micro-ROS agent 溝通，
  * agent 再把資料轉進 ROS 2 網路。訊息格式見 microros_app.h。
@@ -15,13 +15,13 @@
  *                                    （Core/Src/microros/usb_cdc_transport.c），
  *                                    記憶體配置用自訂的 allocator，並把 msg.data 指向固定陣列。
  *   entities_create()                連上 agent 後建立 support（domain ID = ROS_DOMAIN_ID）、
- *                                    node（odom_stm32）和三個 best-effort publisher。
+ *                                    node（odom_stm32）和兩個 best-effort publisher。
  *                                    任何一步失敗就回傳 false。
  *   entities_destroy()               agent 斷線時釋放 publisher、node、support。
  *                                    不等 agent 回應，失敗也照樣釋放本地記憶體。
  *   publish_counts()                 取 odometry 快照，填成 [stamp, pod1~4] 後發布一筆。
  *   imu_msg_init()                   開機時填好 IMU 訊息不會變的欄位（frame_id、共變異數）。
- *   publish_imu()                    IMU 有新的一筆才發布 /imu/data_raw 和 /imu/mag，沒接 IMU 就不發。
+ *   publish_imu()                    IMU 有新的一筆才發布 /imu/data_raw，沒接 IMU 就不發。
  *   microros_app_task()              主迴圈，不會返回。每 ODOM_SAMPLE_PERIOD_MS 執行一次：
  *                                    先 odom_update()，再依連線狀態找 agent、發布資料或清理，
  *                                    板上 LED（PC13）亮 = 已連線。
@@ -42,12 +42,10 @@
 #include <uxr/client/transport.h>
 #include <std_msgs/msg/int32_multi_array.h>
 #include <sensor_msgs/msg/imu.h>
-#include <sensor_msgs/msg/magnetic_field.h>
 
 #define NODE_NAME          "odom_stm32"
 #define TOPIC_NAME         "wheel_counts"
 #define IMU_TOPIC_NAME     "imu/data_raw"   /* imu_tools（madgwick 等）預設吃的名字 */
-#define MAG_TOPIC_NAME     "imu/mag"
 #define IMU_FRAME_ID       "imu_link"
 #define ROS_DOMAIN_ID      4U      /* 主機端 ROS_DOMAIN_ID 要設成一樣才看得到 topic */
 #define MSG_LEN            (1 + ODOM_POD_COUNT)   /* stamp + 4 個 count */
@@ -81,8 +79,6 @@ static int32_t         msg_data[MSG_LEN];
 
 static rcl_publisher_t imu_publisher;
 static sensor_msgs__msg__Imu imu_msg;
-static rcl_publisher_t mag_publisher;
-static sensor_msgs__msg__MagneticField mag_msg;
 static uint32_t        imu_last_seq;   /* 上次發布的 IMU 序號，用來判斷有沒有新資料 */
 static char            imu_frame_id[] = IMU_FRAME_ID;
 
@@ -92,12 +88,11 @@ static void imu_msg_init(void)
     imu_msg.header.frame_id.data     = imu_frame_id;
     imu_msg.header.frame_id.size     = sizeof(imu_frame_id) - 1;
     imu_msg.header.frame_id.capacity = sizeof(imu_frame_id);
-    mag_msg.header.frame_id          = imu_msg.header.frame_id;
 
     /* 沒有姿態：依 sensor_msgs/Imu 的慣例，orientation_covariance[0] = -1 */
     imu_msg.orientation_covariance[0] = -1.0;
 
-    /* 共變異數只填對角線（0、4、8），其他是 0；磁場的共變異數全 0 = 未知 */
+    /* 共變異數只填對角線（0、4、8），其他是 0 */
     for (int i = 0; i < 3; i++) {
         imu_msg.angular_velocity_covariance[i * 4]    = IMU_GYRO_VAR;
         imu_msg.linear_acceleration_covariance[i * 4] = IMU_ACCEL_VAR;
@@ -134,7 +129,6 @@ static bool entities_create(void)
     node          = rcl_get_zero_initialized_node();
     publisher     = rcl_get_zero_initialized_publisher();
     imu_publisher = rcl_get_zero_initialized_publisher();
-    mag_publisher = rcl_get_zero_initialized_publisher();
 
     /* 設定 domain ID；rcl_init 會複製一份 options，用完就可以釋放 */
     rcl_init_options_t init_opts = rcl_get_zero_initialized_init_options();
@@ -158,14 +152,9 @@ static bool entities_create(void)
             TOPIC_NAME) != RCL_RET_OK) {
         return false;
     }
-    if (rclc_publisher_init_best_effort(&imu_publisher, &node,
-            ROSIDL_GET_MSG_TYPE_SUPPORT(sensor_msgs, msg, Imu),
-            IMU_TOPIC_NAME) != RCL_RET_OK) {
-        return false;
-    }
-    return rclc_publisher_init_best_effort(&mag_publisher, &node,
-               ROSIDL_GET_MSG_TYPE_SUPPORT(sensor_msgs, msg, MagneticField),
-               MAG_TOPIC_NAME) == RCL_RET_OK;
+    return rclc_publisher_init_best_effort(&imu_publisher, &node,
+               ROSIDL_GET_MSG_TYPE_SUPPORT(sensor_msgs, msg, Imu),
+               IMU_TOPIC_NAME) == RCL_RET_OK;
 }
 
 static void entities_destroy(void)
@@ -175,7 +164,6 @@ static void entities_destroy(void)
     (void)rmw_uros_set_context_entity_destroy_session_timeout(rmw_context, 0);
 
     /* 斷線時一定回報失敗，忽略即可，本地記憶體照樣會釋放 */
-    IGNORE_RESULT(rcl_publisher_fini(&mag_publisher, &node));
     IGNORE_RESULT(rcl_publisher_fini(&imu_publisher, &node));
     IGNORE_RESULT(rcl_publisher_fini(&publisher, &node));
     IGNORE_RESULT(rcl_node_fini(&node));
@@ -213,12 +201,6 @@ static void publish_imu(void)
     imu_msg.linear_acceleration.z = snap.accel[2];
 
     IGNORE_RESULT(rcl_publish(&imu_publisher, &imu_msg, NULL));
-
-    mag_msg.header.stamp     = imu_msg.header.stamp;
-    mag_msg.magnetic_field.x = snap.mag[0];
-    mag_msg.magnetic_field.y = snap.mag[1];
-    mag_msg.magnetic_field.z = snap.mag[2];
-    IGNORE_RESULT(rcl_publish(&mag_publisher, &mag_msg, NULL));
 }
 
 void microros_app_task(void)
