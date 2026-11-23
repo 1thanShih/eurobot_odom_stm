@@ -3,11 +3,11 @@
  * @brief   在自己的 FreeRTOS task 裡讀 BNO055，把最新資料存成快照給 micro-ROS 發布。
  *
  * 流程：
- *   重置 → 設成 AMG 模式（加速度計、磁力計、陀螺儀的原始值，不融合）→ 等 micro-ROS task 讀完 encoder 後觸發
- *   → 馬上讀 0x08~0x19（加速度、磁力、角速度），stamp 直接用 encoder 的 stamp。
- *   感測器更新率是 BNO055 預設值：加速度 125 Hz、角速度 100 Hz、磁力 20 Hz（所以磁場常和上一筆一樣）。
+ *   重置 → 設成 ACCGYRO 模式（只開加速度計、陀螺儀，不融合）→ 等 micro-ROS task 讀完 encoder 後觸發
+ *   → 馬上一次讀 0x08~0x19（加速度、磁力、角速度；磁力計關著，那 6 byte 不用），stamp 直接用 encoder 的 stamp。
+ *   感測器更新率是 BNO055 預設值：加速度 125 Hz、角速度 100 Hz。
  *   這樣每一筆 /imu 都和同一週期的 /wheel_counts 有一樣的時間戳。
- *   連續讀失敗、或 BNO055 不在融合狀態（例如自己重開機），就重置後重新初始化。
+ *   連續讀失敗、或 BNO055 不在正常運作狀態（例如自己重開機），就重置後重新初始化。
  *
  * 除錯用（debugger 的 Live Expressions）：
  *   imu_status         目前狀態
@@ -19,7 +19,7 @@
  *   imu_request_sample()   micro-ROS task 讀完 encoder 後呼叫，叫 imu_task 用同一個 stamp 讀一筆。
  *   imu_get_snapshot()     複製最新的快照（用 critical section 保護）。
  *   imu_task()             主迴圈：初始化 → 讀資料 → 出問題就重來。
- *   imu_setup()            重置、設定單位和時脈、切到 AMG 模式。
+ *   imu_setup()            重置、設定單位和時脈、切到 ACCGYRO 模式。
  *   imu_run()              每次被觸發就讀一筆，出問題才返回。
  *   store_sample()         把讀到的原始值換算成 SI 單位，寫進快照。
  */
@@ -42,10 +42,9 @@
 
 #define DATA_LEN            18U     /* 0x08~0x19 */
 #define OFS_ACC             0U      /* 0x08 */
-#define OFS_MAG             6U      /* 0x0E */
 #define OFS_GYR             12U     /* 0x14 */
 
-#define BNO_OPR_MODE_AMG        0x07U   /* 三種感測器的原始值，不融合 */
+#define BNO_OPR_MODE_ACCGYRO    0x05U   /* 只開加速度計、陀螺儀，不融合 */
 #define BNO_PWR_MODE_NORMAL     0x00U
 #define BNO_UNIT_SEL_GYRO_RPS   0x02U   /* 角速度用 rad/s，其他維持預設（m/s²） */
 #define BNO_SYS_TRIGGER_EXT_CLK 0x80U   /* 用板上的 32.768 kHz 石英，比內部振盪器準 */
@@ -53,7 +52,6 @@
 
 #define ACC_LSB_PER_MS2     100.0f
 #define GYR_LSB_PER_RPS     900.0f
-#define MAG_LSB_PER_T       16.0e6f     /* 1 µT = 16 LSB */
 
 #define IMU_SAMPLE_FLAG     0x01U
 #define IMU_WAIT_MS         200U    /* 等觸發的上限（micro-ROS ping agent 時會停一下） */
@@ -94,7 +92,6 @@ static void store_sample(const uint8_t *raw, uint32_t stamp_ms)
     for (int i = 0; i < 3; i++) {
         snapshot.gyro[i]  = (float)le16(&raw[OFS_GYR + 2 * i]) / GYR_LSB_PER_RPS;
         snapshot.accel[i] = (float)le16(&raw[OFS_ACC + 2 * i]) / ACC_LSB_PER_MS2;
-        snapshot.mag[i]   = (float)le16(&raw[OFS_MAG + 2 * i]) / MAG_LSB_PER_T;
     }
     snapshot.stamp_ms = stamp_ms;
     snapshot.seq++;
@@ -115,7 +112,7 @@ static bool imu_setup(void)
         return false;
     }
     osDelay(10);
-    if (!imu_hal_write_reg(BNO_REG_OPR_MODE, BNO_OPR_MODE_AMG)) {
+    if (!imu_hal_write_reg(BNO_REG_OPR_MODE, BNO_OPR_MODE_ACCGYRO)) {
         return false;
     }
     osDelay(20);   /* 切模式要 7 ms */

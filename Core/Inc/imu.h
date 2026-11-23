@@ -1,8 +1,8 @@
 /**
  * @file    imu.h
- * @brief   讀 BNO055（I2C1），把最新的加速度、角速度、磁場存成快照。
+ * @brief   讀 BNO055（I2C1），把最新的加速度、角速度存成快照。
  *
- * 用 AMG 模式：只給三種感測器的原始值，不做融合，姿態由上位機自己算。
+ * 用 ACCGYRO 模式：只開加速度計和陀螺儀，不做融合，姿態由上位機自己算。
  * 讀取在自己的 FreeRTOS task 裡做：micro-ROS task 讀完 encoder 就呼叫 imu_request_sample()，
  * IMU task 馬上讀一筆，stamp 和 encoder 相同。其他 task 用 imu_get_snapshot() 拿資料。
  */
@@ -18,7 +18,6 @@ typedef struct {
     uint32_t stamp_ms;   /* 觸發這筆讀取的 encoder stamp（STM32 開機後的毫秒數），和 /wheel_counts 一樣 */
     float    gyro[3];    /* 角速度 x, y, z（rad/s） */
     float    accel[3];   /* 加速度 x, y, z（m/s²，含重力） */
-    float    mag[3];     /* 磁場 x, y, z（T） */
 } ImuSnapshot;
 
 /** 建立 IMU task。在 FreeRTOS task 裡呼叫一次。 */
